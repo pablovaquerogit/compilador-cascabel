@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compilador-cascabel"
+version = "1.1.0"
+description = "Compilador educativo para el lenguaje Cascabel"
+requires-python = ">=3.10"
+dependencies = [
+    "rply",
+    "nltk",
+]
+
+[project.scripts]
+cascabel = "cascabel.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

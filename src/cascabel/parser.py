@@ -1,6 +1,6 @@
 from rply import ParserGenerator
 
-from Arbol import Arbol
+from .ast import Arbol
 
 
 class SymbolTable(dict):

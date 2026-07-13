@@ -9,3 +9,13 @@ __pycache__/
 # Archivos generados por el compilador
 AST.txt
 out.py
+
+# Cachés y metadatos de desarrollo
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Resultados generados
+generated/*
+!generated/.gitkeep

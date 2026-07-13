@@ -1,0 +1,3 @@
+programa {
+  entero numero = 1 @ 2;
+}

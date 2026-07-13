@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from AnalizadorLexico import Lexer
-from AnalizadorSemantico import SemAnalyzer
-from AnalizadorSintactico import Parser
-from GeneradorDeCodigo import CodeGenerator
+from cascabel.lexer import Lexer
+from cascabel.semantic import SemAnalyzer
+from cascabel.parser import Parser
+from cascabel.code_generator import CodeGenerator
 
 
 def tokenize(source: str):

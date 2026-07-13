@@ -8,16 +8,18 @@ from pathlib import Path
 
 from rply.errors import LexingError
 
-from AnalizadorLexico import Lexer
-from AnalizadorSemantico import SemAnalyzer
-from AnalizadorSintactico import Parser
-from GeneradorDeCodigo import CodeGenerator
+from .lexer import Lexer
+from .semantic import SemAnalyzer
+from .parser import Parser
+from .code_generator import CodeGenerator
 
 
-BASE_DIR = Path(__file__).resolve().parent
-PROGRAMS_DIR = BASE_DIR.parent / "programas"
-AST_PATH = BASE_DIR / "AST.txt"
-OUTPUT_PATH = BASE_DIR / "out.py"
+PACKAGE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = PACKAGE_DIR.parents[1]
+EXAMPLES_DIR = PROJECT_ROOT / "examples"
+GENERATED_DIR = PROJECT_ROOT / "generated"
+AST_PATH = GENERATED_DIR / "AST.txt"
+OUTPUT_PATH = GENERATED_DIR / "out.py"
 
 
 class Colors:
@@ -66,7 +68,25 @@ def request_source_file() -> Path | None:
     elif requested_path.exists():
         source_path = requested_path.resolve()
     else:
-        source_path = PROGRAMS_DIR / requested_path
+        direct_path = EXAMPLES_DIR / requested_path
+
+        if direct_path.is_file():
+            source_path = direct_path
+        else:
+            matches = list(EXAMPLES_DIR.rglob(requested_path.name))
+
+            if len(matches) == 1:
+                source_path = matches[0]
+            elif len(matches) > 1:
+                locations = ", ".join(
+                    str(path.relative_to(PROJECT_ROOT)) for path in matches
+                )
+                raise ValueError(
+                    f"hay varios ejemplos llamados '{requested_path.name}': "
+                    f"{locations}"
+                )
+            else:
+                source_path = direct_path
 
     if not source_path.is_file():
         raise FileNotFoundError(
@@ -238,6 +258,7 @@ def execute_generated_program() -> bool:
 
 
 def main() -> int:
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     print_header()
 
     try:

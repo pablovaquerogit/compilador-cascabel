@@ -1,0 +1,12 @@
+programa {
+  si Verdadero entonces {
+  } sino {
+  }
+
+  mientras Falso {
+  }
+
+  entero i = 1;
+  para i desde 1 hasta 0 {
+  }
+}

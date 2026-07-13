@@ -1,0 +1,4 @@
+programa {
+  entero edad;
+  cadena edad;
+}

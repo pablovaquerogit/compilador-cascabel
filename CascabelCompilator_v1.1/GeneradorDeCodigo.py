@@ -5,6 +5,17 @@ import re
 
 class CodeGenerator:
 
+    BOOLEAN_LITERALS = {
+        "Verdadero": "True",
+        "verdadero": "True",
+        "True": "True",
+        "true": "True",
+        "Falso": "False",
+        "falso": "False",
+        "False": "False",
+        "false": "False",
+    }
+
     def __init__(self, symbols):
         self.output = open("out.py", "w")
         self.indent = 0
@@ -23,8 +34,12 @@ class CodeGenerator:
             if "$" in ast and ast.startswith('"') and ast.endswith('"'):
                 self.output.write(self._string_to_code(ast))
                 return
+            # Literal booleano
+            if ast in self.BOOLEAN_LITERALS:
+                self.output.write(self.BOOLEAN_LITERALS[ast])
+                return
             # Literal numérico (ENTERO o REAL)
-            if re.fullmatch(r'-?\d+(\.\d+)?', ast):
+            if re.fullmatch(r"\d+(\.\d+)?", ast):
                 self.output.write(ast)
                 return
             # Cadena literal simple (p.ej. '"hola"')
@@ -193,8 +208,12 @@ class CodeGenerator:
             if "$" in expr and expr.startswith('"') and expr.endswith('"'):
                 self.output.write(self._string_to_code(expr))
                 return
+            # booleano
+            if expr in self.BOOLEAN_LITERALS:
+                self.output.write(self.BOOLEAN_LITERALS[expr])
+                return
             # numérico
-            if re.fullmatch(r'-?\d+(\.\d+)?', expr):
+            if re.fullmatch(r"\d+(\.\d+)?", expr):
                 self.output.write(expr)
                 return
             # cadena literal
@@ -215,6 +234,13 @@ class CodeGenerator:
         # NOT unario
         if tag == "no":
             self.output.write("(not ")
+            self._gen_expr(hijos[0])
+            self.output.write(")")
+            return
+
+        # Signo negativo unario
+        if tag == "negativo":
+            self.output.write("(-")
             self._gen_expr(hijos[0])
             self.output.write(")")
             return

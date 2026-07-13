@@ -25,54 +25,60 @@ class SemAnalyzer:
         """Verifica todo el programa y devuelve el total de errores."""
 
         self.num_errors = 0
+        self._verify_duplicate_declarations()
 
         if ast is None or ast.etiqueta() != "programa":
             self._error("raíz inválida; se esperaba 'programa'")
             return self.num_errors
 
         self._verify_block(ast.hijos())
-
         return self.num_errors
 
-    def _error(self, mensaje):
-        """Muestra un error y aumenta el contador."""
+    def _verify_duplicate_declarations(self):
+        duplicates = getattr(
+            self.sym_table,
+            "duplicate_declarations",
+            [],
+        )
 
-        print(f"**ERROR SEMÁNTICO: {mensaje}**")
+        for duplicate in duplicates:
+            name = duplicate["name"]
+            original_type = duplicate["original_type"]
+            repeated_type = duplicate["repeated_type"]
+            self._error(
+                f"la variable '{name}' ya fue declarada como "
+                f"'{original_type}' y no puede volver a declararse "
+                f"como '{repeated_type}'"
+            )
+
+    def _error(self, message):
+        print(f"**ERROR SEMÁNTICO: {message}**")
         self.num_errors += 1
 
-    def _verify_block(self, instrucciones):
-        """Recorre una instrucción o una lista de instrucciones."""
-
-        if instrucciones is None:
+    def _verify_block(self, instructions):
+        if instructions is None:
             return
 
-        if isinstance(instrucciones, list):
-            for instruccion in instrucciones:
-                self.verifySubTree(instruccion)
-
+        if isinstance(instructions, list):
+            for instruction in instructions:
+                self.verifySubTree(instruction)
             return
 
-        self.verifySubTree(instrucciones)
+        self.verifySubTree(instructions)
 
-    def _verify_condition(self, condicion, estructura):
-        """Comprueba que una condición sea booleana."""
+    def _verify_condition(self, condition, structure):
+        condition_type = self.tipoSubTree(condition)
 
-        tipo_condicion = self.tipoSubTree(condicion)
-
-        # Si tipoSubTree ya encontró un error, evitamos generar otro
-        # error adicional como consecuencia del primero.
-        if tipo_condicion is None:
+        if condition_type is None:
             return
 
-        if tipo_condicion != "booleano":
+        if condition_type != "booleano":
             self._error(
-                f"la condición de '{estructura}' debe ser booleana, "
-                f"pero se obtuvo '{tipo_condicion}'"
+                f"la condición de '{structure}' debe ser booleana, "
+                f"pero se obtuvo '{condition_type}'"
             )
 
     def verifySubTree(self, ast):
-        """Verifica una instrucción del árbol."""
-
         if ast is None:
             return
 
@@ -83,150 +89,114 @@ class SemAnalyzer:
         if not hasattr(ast, "etiqueta"):
             return
 
-        etiqueta = ast.etiqueta()
-        hijos = ast.hijos() or []
+        tag = ast.etiqueta()
+        children = ast.hijos() or []
 
-        # Declaración sin asignación:
-        # entero numero;
-        if etiqueta == "declara":
+        if tag == "declara":
             return
 
-        # Declaración con asignación:
-        # entero numero = 5;
-        if etiqueta == "declara_asigna":
-            tipo_declarado, id_var, expresion = hijos
-            tipo_expresion = self.tipoSubTree(expresion)
+        if tag == "declara_asigna":
+            declared_type, variable_name, expression = children
+            expression_type = self.tipoSubTree(expression)
 
             if (
-                tipo_expresion is not None
-                and tipo_declarado != tipo_expresion
+                expression_type is not None
+                and declared_type != expression_type
             ):
                 self._error(
-                    f"se esperaba un valor '{tipo_declarado}' "
-                    f"para la variable '{id_var}', pero se obtuvo "
-                    f"'{tipo_expresion}'"
+                    f"se esperaba un valor '{declared_type}' "
+                    f"para la variable '{variable_name}', pero se obtuvo "
+                    f"'{expression_type}'"
                 )
-
             return
 
-        # Asignación:
-        # numero = 10;
-        if etiqueta == "=":
-            id_var, expresion = hijos
-            tipo_expresion = self.tipoSubTree(expresion)
+        if tag == "=":
+            variable_name, expression = children
+            expression_type = self.tipoSubTree(expression)
 
-            if id_var not in self.sym_table:
-                self._error(f"variable '{id_var}' no declarada")
+            if variable_name not in self.sym_table:
+                self._error(f"variable '{variable_name}' no declarada")
                 return
 
-            tipo_declarado = self.sym_table[id_var]
+            declared_type = self.sym_table[variable_name]
 
             if (
-                tipo_expresion is not None
-                and tipo_declarado != tipo_expresion
+                expression_type is not None
+                and declared_type != expression_type
             ):
                 self._error(
-                    f"se esperaba un valor '{tipo_declarado}' "
-                    f"para la variable '{id_var}', pero se obtuvo "
-                    f"'{tipo_expresion}'"
+                    f"se esperaba un valor '{declared_type}' "
+                    f"para la variable '{variable_name}', pero se obtuvo "
+                    f"'{expression_type}'"
                 )
-
             return
 
-        # Lectura:
-        # lee numero;
-        if etiqueta == "lee":
-            id_var = hijos[0]
+        if tag == "lee":
+            variable_name = children[0]
 
-            if id_var not in self.sym_table:
-                self._error(f"variable '{id_var}' no declarada")
-
+            if variable_name not in self.sym_table:
+                self._error(f"variable '{variable_name}' no declarada")
             return
 
-        # Escritura:
-        # escribe numero;
-        if etiqueta == "escribe":
-            self.tipoSubTree(hijos[0])
+        if tag == "escribe":
+            self.tipoSubTree(children[0])
             return
 
-        # Condicional sin sino
-        if etiqueta == "si":
-            condicion = hijos[0]
-            instrucciones = hijos[1:]
-
-            self._verify_condition(condicion, "si")
-            self._verify_block(instrucciones)
-
+        if tag == "si":
+            condition = children[0]
+            instructions = children[1:]
+            self._verify_condition(condition, "si")
+            self._verify_block(instructions)
             return
 
-        # Condicional con sino
-        if etiqueta == "si_sino":
-            condicion, bloque_si, bloque_sino = hijos
-
-            self._verify_condition(condicion, "si")
-            self._verify_block(bloque_si)
-            self._verify_block(bloque_sino)
-
+        if tag == "si_sino":
+            condition, if_block, else_block = children
+            self._verify_condition(condition, "si")
+            self._verify_block(if_block)
+            self._verify_block(else_block)
             return
 
-        # Ciclo mientras
-        if etiqueta == "mientras":
-            condicion, instrucciones = hijos
-
-            self._verify_condition(condicion, "mientras")
-            self._verify_block(instrucciones)
-
+        if tag == "mientras":
+            condition, instructions = children
+            self._verify_condition(condition, "mientras")
+            self._verify_block(instructions)
             return
 
-        # Ciclo para
-        if etiqueta == "para":
-            id_var, inicio, fin, instrucciones = hijos
+        if tag == "para":
+            variable_name, start, end, instructions = children
 
-            if id_var not in self.sym_table:
+            if variable_name not in self.sym_table:
                 self._error(
-                    f"variable de control '{id_var}' no declarada"
+                    f"variable de control '{variable_name}' no declarada"
                 )
-
-            elif self.sym_table[id_var] != "entero":
+            elif self.sym_table[variable_name] != "entero":
                 self._error(
-                    f"la variable de control '{id_var}' debe ser "
+                    f"la variable de control '{variable_name}' debe ser "
                     f"de tipo 'entero', pero es "
-                    f"'{self.sym_table[id_var]}'"
+                    f"'{self.sym_table[variable_name]}'"
                 )
 
-            tipo_inicio = self.tipoSubTree(inicio)
-            tipo_fin = self.tipoSubTree(fin)
+            start_type = self.tipoSubTree(start)
+            end_type = self.tipoSubTree(end)
 
-            if (
-                tipo_inicio is not None
-                and tipo_inicio != "entero"
-            ):
+            if start_type is not None and start_type != "entero":
                 self._error(
                     "el valor inicial de 'para' debe ser "
-                    f"'entero', pero se obtuvo '{tipo_inicio}'"
+                    f"'entero', pero se obtuvo '{start_type}'"
                 )
 
-            if (
-                tipo_fin is not None
-                and tipo_fin != "entero"
-            ):
+            if end_type is not None and end_type != "entero":
                 self._error(
                     "el valor final de 'para' debe ser "
-                    f"'entero', pero se obtuvo '{tipo_fin}'"
+                    f"'entero', pero se obtuvo '{end_type}'"
                 )
 
-            self._verify_block(instrucciones)
-
+            self._verify_block(instructions)
             return
 
-        # Permite comprobar directamente una expresión.
         self.tipoSubTree(ast)
 
     def tipoSubTree(self, ast):
-        """Obtiene el tipo de una expresión y reporta sus errores."""
-
-        # En Python, bool también es una subclase de int.
-        # Por eso debemos comprobar bool antes que int.
         if isinstance(ast, bool):
             return "booleano"
 
@@ -236,19 +206,17 @@ class SemAnalyzer:
         if isinstance(ast, float):
             return "real"
 
-        # Literales o identificadores representados como texto.
         if isinstance(ast, str):
-
             if ast.startswith('"') and ast.endswith('"'):
                 return "cadena"
 
             if ast in self.LITERALES_BOOLEANOS:
                 return "booleano"
 
-            if re.fullmatch(r"-?\d+", ast):
+            if re.fullmatch(r"\d+", ast):
                 return "entero"
 
-            if re.fullmatch(r"-?\d*\.\d+", ast):
+            if re.fullmatch(r"\d+\.\d+", ast):
                 return "real"
 
             if ast in self.sym_table:
@@ -260,129 +228,104 @@ class SemAnalyzer:
         if ast is None or not hasattr(ast, "etiqueta"):
             return None
 
-        etiqueta = ast.etiqueta()
-        hijos = ast.hijos() or []
+        tag = ast.etiqueta()
+        children = ast.hijos() or []
 
-        # Operadores aritméticos
-        if (
-            etiqueta in ("+", "-", "*", "/")
-            and len(hijos) == 2
-        ):
-            tipo_izquierdo = self.tipoSubTree(hijos[0])
-            tipo_derecho = self.tipoSubTree(hijos[1])
+        if tag == "negativo" and len(children) == 1:
+            operand_type = self.tipoSubTree(children[0])
 
-            if (
-                tipo_izquierdo is None
-                or tipo_derecho is None
-            ):
+            if operand_type is None:
+                return None
+
+            if operand_type not in self.TIPOS_NUMERICOS:
+                self._error(
+                    "el signo negativo requiere un valor numérico, "
+                    f"pero recibió '{operand_type}'"
+                )
+                return None
+
+            return operand_type
+
+        if tag in ("+", "-", "*", "/") and len(children) == 2:
+            left_type = self.tipoSubTree(children[0])
+            right_type = self.tipoSubTree(children[1])
+
+            if left_type is None or right_type is None:
                 return None
 
             if (
-                tipo_izquierdo not in self.TIPOS_NUMERICOS
-                or tipo_derecho not in self.TIPOS_NUMERICOS
+                left_type not in self.TIPOS_NUMERICOS
+                or right_type not in self.TIPOS_NUMERICOS
             ):
                 self._error(
-                    f"el operador '{etiqueta}' requiere valores "
-                    f"numéricos, pero recibió '{tipo_izquierdo}' "
-                    f"y '{tipo_derecho}'"
+                    f"el operador '{tag}' requiere valores numéricos, "
+                    f"pero recibió '{left_type}' y '{right_type}'"
                 )
-
                 return None
 
-            # En Python, una división siempre produce un valor real.
-            if (
-                etiqueta == "/"
-                or "real" in (tipo_izquierdo, tipo_derecho)
-            ):
+            if tag == "/" or "real" in (left_type, right_type):
                 return "real"
 
             return "entero"
 
-        # Operadores de comparación
         if (
-            etiqueta in ("==", "!=", "<", ">", "<=", ">=")
-            and len(hijos) == 2
+            tag in ("==", "!=", "<", ">", "<=", ">=")
+            and len(children) == 2
         ):
-            tipo_izquierdo = self.tipoSubTree(hijos[0])
-            tipo_derecho = self.tipoSubTree(hijos[1])
+            left_type = self.tipoSubTree(children[0])
+            right_type = self.tipoSubTree(children[1])
 
-            if (
-                tipo_izquierdo is None
-                or tipo_derecho is None
-            ):
+            if left_type is None or right_type is None:
                 return None
 
-            ambos_numericos = (
-                tipo_izquierdo in self.TIPOS_NUMERICOS
-                and tipo_derecho in self.TIPOS_NUMERICOS
+            both_numeric = (
+                left_type in self.TIPOS_NUMERICOS
+                and right_type in self.TIPOS_NUMERICOS
             )
 
-            if etiqueta in ("==", "!="):
-
-                if (
-                    tipo_izquierdo != tipo_derecho
-                    and not ambos_numericos
-                ):
+            if tag in ("==", "!="):
+                if left_type != right_type and not both_numeric:
                     self._error(
-                        f"no se pueden comparar con '{etiqueta}' "
-                        f"los tipos '{tipo_izquierdo}' y "
-                        f"'{tipo_derecho}'"
+                        f"no se pueden comparar con '{tag}' los tipos "
+                        f"'{left_type}' y '{right_type}'"
                     )
-
                     return None
-
-            elif not ambos_numericos:
+            elif not both_numeric:
                 self._error(
-                    f"el operador '{etiqueta}' requiere valores "
-                    f"numéricos, pero recibió '{tipo_izquierdo}' "
-                    f"y '{tipo_derecho}'"
+                    f"el operador '{tag}' requiere valores numéricos, "
+                    f"pero recibió '{left_type}' y '{right_type}'"
                 )
-
                 return None
 
             return "booleano"
 
-        # Operadores booleanos binarios
-        if (
-            etiqueta in ("y", "o")
-            and len(hijos) == 2
-        ):
-            tipo_izquierdo = self.tipoSubTree(hijos[0])
-            tipo_derecho = self.tipoSubTree(hijos[1])
+        if tag in ("y", "o") and len(children) == 2:
+            left_type = self.tipoSubTree(children[0])
+            right_type = self.tipoSubTree(children[1])
 
-            if (
-                tipo_izquierdo is None
-                or tipo_derecho is None
-            ):
+            if left_type is None or right_type is None:
                 return None
 
-            if (
-                tipo_izquierdo != "booleano"
-                or tipo_derecho != "booleano"
-            ):
+            if left_type != "booleano" or right_type != "booleano":
                 self._error(
-                    f"el operador '{etiqueta}' requiere valores "
-                    f"booleanos, pero recibió '{tipo_izquierdo}' "
-                    f"y '{tipo_derecho}'"
+                    f"el operador '{tag}' requiere valores booleanos, "
+                    f"pero recibió '{left_type}' y '{right_type}'"
                 )
-
                 return None
 
             return "booleano"
 
-        # Operador booleano unario
-        if etiqueta == "no" and len(hijos) == 1:
-            tipo_operando = self.tipoSubTree(hijos[0])
+        if tag == "no" and len(children) == 1:
+            operand_type = self.tipoSubTree(children[0])
 
-            if tipo_operando is None:
+            if operand_type is None:
                 return None
 
-            if tipo_operando != "booleano":
+            if operand_type != "booleano":
                 self._error(
                     "el operador 'no' requiere un valor booleano, "
-                    f"pero recibió '{tipo_operando}'"
+                    f"pero recibió '{operand_type}'"
                 )
-
                 return None
 
             return "booleano"

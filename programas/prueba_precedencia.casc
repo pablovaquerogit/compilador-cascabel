@@ -1,0 +1,7 @@
+programa {
+  entero resultado1 = 2 + 3 * 4;
+  entero resultado2 = (2 + 3) * 4;
+
+  escribe resultado1;
+  escribe resultado2;
+}

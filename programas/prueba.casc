@@ -1,0 +1,12 @@
+#programa
+
+programa {
+    cadena nombre;
+    escribe "Por favor, ingrese su nombre:";
+    lee nombre;
+    si nombre!="" entonces {
+        escribe "¡Hola, $nombre! ¡Bienvenido!";
+    }sino{
+        escribe "No se ingresó un nombre";
+    }
+}

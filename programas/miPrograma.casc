@@ -1,0 +1,12 @@
+programa{
+  entero a = 5;
+  entero b = 7;
+  entero suma;
+  suma = a + b;
+  escribe "La suma es:";
+  escribe suma;
+  si suma > 10 entonces{
+    escribe "Mayor que 10";
+  }
+}
+

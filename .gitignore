@@ -1,0 +1,11 @@
+# Archivos de macOS
+.DS_Store
+__MACOSX/
+
+# Archivos temporales de Python
+__pycache__/
+*.py[cod]
+
+# Archivos generados por el compilador
+AST.txt
+out.py

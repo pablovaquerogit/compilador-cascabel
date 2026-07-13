@@ -1,0 +1,5 @@
+#hola mundo en lenguaje cascabel
+
+programa {
+  escribe "Hola Mundo!";
+}

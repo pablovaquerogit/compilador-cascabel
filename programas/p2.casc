@@ -1,0 +1,15 @@
+programa{
+  entero n;
+  escribe "Ingresa un número entero positivo:";
+  lee n;
+  escribe "imprimiendo impares menores a $n";
+  si n > 0 entonces {
+    entero i = 1;
+    mientras i <= n {
+      escribe i;
+      i = i + 2;
+    }
+  } sino {
+    escribe "ERROR: El número $n no es un número positivo";
+  }
+}

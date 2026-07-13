@@ -1,0 +1,12 @@
+programa{
+  entero x = 10;
+  cadena mensaje = "Valor de x:";
+  escribe mensaje;
+  escribe x;
+  real promedio = x / "2";
+  booleano flag = Verdadero + Falso;
+  x = x + z;
+  entero total;
+  total = mensaje;
+  escribe desconocida;
+}

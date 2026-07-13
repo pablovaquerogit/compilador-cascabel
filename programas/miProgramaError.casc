@@ -1,0 +1,9 @@
+programa{
+  entero a = 1;
+  entero b = 2
+  entero c = a + b;
+  escribe c;
+  mientras c > 0 {
+    escribe c;
+  }
+}
